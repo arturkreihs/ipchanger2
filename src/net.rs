@@ -5,7 +5,7 @@ pub struct Net {
 }
 
 impl Net {
-    pub fn new(mac: [u8; 6]) -> Self {
+    pub fn new(idx: u32) -> Self {
         Net { idx: 0 }
     }
 
