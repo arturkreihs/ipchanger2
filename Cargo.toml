@@ -9,3 +9,4 @@ config = { version = "0.15.11", default-features = false, features = ["toml"] }
 netwatcher = "0.1.0"
 serde = { version = "1.0.219", features = ["derive"] }
 thiserror = "2.0.12"
+toml = "0.8.23"

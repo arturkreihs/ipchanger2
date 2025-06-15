@@ -6,7 +6,13 @@ pub struct Net {
 
 impl Net {
     pub fn new(idx: u32) -> Self {
-        Net { idx: 0 }
+        Net { idx }
+    }
+
+    pub fn get_addrs(&self) -> Result<Vec<std::net::Ipv4Addr>, NetError> {
+        let ifaces = netwatcher::list_interfaces()?;
+        let iface = ifaces.get(&self.idx).ok_or(NetError::NotFound)?;
+        Ok(iface.ipv4_ips().cloned().collect())
     }
 
     pub fn list() -> Result<HashMap<u32, Vec<u8>>, NetError> {
@@ -32,4 +38,6 @@ impl Net {
 pub enum NetError {
     #[error(transparent)]
     NetWatcher(#[from] netwatcher::Error),
+    #[error("iface can't be found")]
+    NotFound,
 }
