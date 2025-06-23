@@ -1,3 +1,5 @@
+use std::net::Ipv4Addr;
+
 use anyhow::Result;
 
 mod settings;
@@ -24,9 +26,10 @@ fn main() -> Result<()> {
     };
 
     let net = Net::new(&settings.mac)?;
-    for ip in net.get_addrs()? {
-        println!("{ip:?}");
-    }
+    // for ip in net.get_addrs()? {
+    //     println!("{ip:?}");
+    // }
+    net.add_addr(Ipv4Addr::new(10, 10, 9, 9), 22)?;
 
     Ok(())
 }
