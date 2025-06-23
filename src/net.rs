@@ -50,6 +50,18 @@ impl Net {
         Ok(())
     }
 
+    pub fn del_addr(&self, addr: Ipv4Addr) -> Result<(), NetError> {
+        Command::new("netsh")
+            .arg("interface")
+            .arg("ipv4")
+            .arg("delete")
+            .arg("address")
+            .arg(format!("name={}", self.idx))
+            .arg(format!("address={}", addr))
+            .output()?;
+        Ok(())
+    }
+
     fn parse_mac(mac: &str) -> Result<[u8; 6], NetError> {
         if mac.len() != 12 {
             return Err(NetError::MacConvert);
