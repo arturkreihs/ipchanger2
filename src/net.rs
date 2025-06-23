@@ -5,8 +5,15 @@ pub struct Net {
 }
 
 impl Net {
-    pub fn new(idx: u32) -> Self {
-        Net { idx }
+    pub fn new(mac: &str) -> Result<Self, NetError> {
+        let mac = Self::parse_mac(mac)?;
+        let list = Self::list()?;
+        let entry = list
+            .iter()
+            .find(|&(_, v)| v == &mac)
+            .ok_or(NetError::NotFound)?;
+        let idx = *entry.0;
+        Ok(Net { idx })
     }
 
     pub fn get_addrs(&self) -> Result<Vec<std::net::Ipv4Addr>, NetError> {
@@ -15,22 +22,28 @@ impl Net {
         Ok(iface.ipv4_ips().cloned().collect())
     }
 
-    pub fn list() -> Result<HashMap<u32, Vec<u8>>, NetError> {
+    pub fn list() -> Result<HashMap<u32, [u8; 6]>, NetError> {
         let ifaces = netwatcher::list_interfaces()?;
         let ifaces = ifaces
             .into_iter()
             .filter_map(|(k, v)| {
-                let mac: Result<Vec<u8>, _> =
-                    v.hw_addr.split(':').try_fold(Vec::new(), |mut acc, hex| {
-                        u8::from_str_radix(hex, 16).map(|byte| {
-                            acc.push(byte);
-                            acc
-                        })
-                    });
-                mac.ok().map(|mac| (k, mac))
+                Self::parse_mac(&v.hw_addr.replace(":", ""))
+                    .map(|m| (k, m))
+                    .ok()
             })
-            .collect::<HashMap<u32, Vec<u8>>>();
+            .collect::<HashMap<u32, [u8; 6]>>();
         Ok(ifaces)
+    }
+
+    fn parse_mac(mac: &str) -> Result<[u8; 6], NetError> {
+        if mac.len() != 12 {
+            return Err(NetError::MacConvert);
+        }
+        let mac = (0..6)
+            .map(|i| &mac[i * 2..i * 2 + 2])
+            .filter_map(|i| u8::from_str_radix(i, 16).ok())
+            .collect::<Vec<u8>>();
+        mac.try_into().map_err(|_| NetError::MacConvert)
     }
 }
 
@@ -40,4 +53,8 @@ pub enum NetError {
     NetWatcher(#[from] netwatcher::Error),
     #[error("iface can't be found")]
     NotFound,
+    #[error("can't convert from string")]
+    MacConvert,
+    #[error(transparent)]
+    ParseInt(#[from] std::num::ParseIntError),
 }

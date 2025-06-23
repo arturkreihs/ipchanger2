@@ -6,7 +6,7 @@ const FILENAME: &str = "config.toml";
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct Settings {
-    pub idx: u32,
+    pub mac: String,
 }
 
 #[derive(Debug, thiserror::Error)]
