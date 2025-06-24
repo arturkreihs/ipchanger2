@@ -37,7 +37,7 @@ impl Net {
         Ok(iface.ipv4_ips().cloned().collect())
     }
 
-    pub fn add_addr(&self, addr: Ipv4Addr, mask: u8) -> Result<(), NetError> {
+    pub fn add_addr(&self, addr: &Ipv4Addr, mask: u8) -> Result<(), NetError> {
         Command::new("netsh")
             .arg("interface")
             .arg("ipv4")
@@ -50,7 +50,7 @@ impl Net {
         Ok(())
     }
 
-    pub fn del_addr(&self, addr: Ipv4Addr) -> Result<(), NetError> {
+    pub fn del_addr(&self, addr: &Ipv4Addr) -> Result<(), NetError> {
         Command::new("netsh")
             .arg("interface")
             .arg("ipv4")

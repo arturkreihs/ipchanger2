@@ -1,4 +1,4 @@
-use std::{io, io::Write, net::Ipv4Addr};
+use std::{io, io::Write};
 
 use anyhow::Result;
 
@@ -47,7 +47,8 @@ fn main() -> Result<()> {
         let result = match cmd {
             Some("q") => Ok(false),
             Some("a") => parser::add_addr(&net, param).map(|_| true),
-            // Some("d") => parser::del_addr(&net, param),
+            Some("d") => parser::del_addr(&net, param).map(|_| true),
+            Some("l") => parser::list_addrs(&net).map(|_| true),
             Some(_) | None => {
                 println!("unknown command");
                 Ok(true)

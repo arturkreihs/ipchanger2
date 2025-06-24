@@ -1,6 +1,6 @@
 use std::{net::Ipv4Addr, sync::LazyLock};
 
-use anyhow::{Result, anyhow};
+use anyhow::{Result, anyhow, bail};
 use regex::Regex;
 
 use crate::net::Net;
@@ -27,9 +27,23 @@ pub fn add_addr(net: &Net, param: Option<&str>) -> Result<()> {
     let addr: Ipv4Addr = addr.parse()?;
     let mask: u8 = mask.parse()?;
 
-    net.add_addr(addr, mask)?;
+    net.add_addr(&addr, mask)?;
     Ok(())
 }
 
-pub fn del_addr(net: &Net, param: Option<&str>) {}
-pub fn list_addrs(net: &Net) {}
+pub fn del_addr(net: &Net, param: Option<&str>) -> Result<()> {
+    let idx: u8 = param.ok_or(anyhow!("no addr provided"))?.parse()?;
+    if idx == 0 {
+        bail!("");
+    }
+    let idx = idx - 1;
+    net.del_addr(net.get_addrs()?.get(idx as usize).ok_or(anyhow!(""))?)?;
+    Ok(())
+}
+
+pub fn list_addrs(net: &Net) -> Result<()> {
+    for (idx, addr) in net.get_addrs()?.iter().enumerate() {
+        println!("{} - {}", idx + 1, addr);
+    }
+    Ok(())
+}
