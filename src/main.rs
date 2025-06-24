@@ -10,6 +10,7 @@ use net::Net;
 mod parser;
 
 fn main() -> Result<()> {
+    // load settings; show MACs on error
     let settings = match settings::load() {
         Ok(s) => s,
         Err(_) => {
@@ -28,11 +29,8 @@ fn main() -> Result<()> {
     };
 
     let net = Net::new(&settings.mac)?;
-    // for ip in net.get_addrs()? {
-    //     println!("{ip:?}");
-    // }
-    net.add_addr(Ipv4Addr::new(10, 10, 9, 9), 22)?;
 
+    // main loop
     let mut line = String::new();
     loop {
         print!("> ");
@@ -41,12 +39,25 @@ fn main() -> Result<()> {
         // reading line
         std::io::stdout().flush()?;
         io::stdin().read_line(&mut line)?;
+        let line = line.trim();
 
         // executing cmd
-        match line.get(0..1) {
-            Some("q") => break,
-            Some("a") => parser::add_addr(&net, &line),
-            Some(_) | None => println!("unknown command"),
+        let cmd = line.get(0..1);
+        let param = line.get(1..);
+        let result = match cmd {
+            Some("q") => Ok(false),
+            Some("a") => parser::add_addr(&net, param).map(|_| true),
+            // Some("d") => parser::del_addr(&net, param),
+            Some(_) | None => {
+                println!("unknown command");
+                Ok(true)
+            }
+        };
+
+        match result {
+            Ok(false) => break,
+            Ok(true) => continue,
+            Err(e) => eprintln!("{e}"),
         }
     }
 
