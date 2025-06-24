@@ -33,7 +33,7 @@ fn main() -> Result<()> {
     // main loop
     let mut line = String::new();
     loop {
-        print!("> ");
+        print!("ipchanger> ");
         line.clear();
 
         // reading line
