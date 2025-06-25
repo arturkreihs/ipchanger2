@@ -49,6 +49,6 @@ pub fn list_addrs(net: &Net) -> Result<()> {
     Ok(())
 }
 
-pub fn print_help() {
-    println!("");
-}
+// pub fn print_help() {
+//     println!("");
+// }

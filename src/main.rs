@@ -1,7 +1,7 @@
 use std::{io, io::Write};
 
 use owo_colors::OwoColorize;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 
 mod settings;
 
@@ -50,16 +50,13 @@ fn main() -> Result<()> {
             Some("a") => parser::add_addr(&net, param).map(|_| true),
             Some("d") => parser::del_addr(&net, param).map(|_| true),
             Some("l") => parser::list_addrs(&net).map(|_| true),
-            Some(_) | None => {
-                println!("{}", "unknown command".red());
-                Ok(true)
-            }
+            Some(_) | None => Err(anyhow!("unknown command")),
         };
 
         match result {
             Ok(false) => break,
             Ok(true) => continue,
-            Err(e) => eprintln!("{}", e.red()),
+            Err(e) => eprintln!("{} {}", "Error:".cyan(), e.red()),
         }
     }
 
