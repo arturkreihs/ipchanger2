@@ -11,3 +11,10 @@ regex = { version = "1.11.1", default-features = false, features = ["std"] }
 serde = { version = "1.0.219", features = ["derive"] }
 thiserror = "2.0.12"
 toml = "0.8.23"
+
+[profile.release]
+strip = true
+lto = true
+panic = "abort"
+overflow-checks = false
+codegen-units = 1
