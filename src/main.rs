@@ -11,6 +11,8 @@ use net::Net;
 mod parser;
 
 fn main() -> Result<()> {
+    enable_ansi_support();
+
     // load settings; show MACs on error
     let settings = match settings::load() {
         Ok(s) => s,
@@ -61,4 +63,18 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn enable_ansi_support() {
+    use winapi::um::consoleapi::SetConsoleMode;
+    use winapi::um::processenv::GetStdHandle;
+    use winapi::um::winbase::STD_OUTPUT_HANDLE;
+    use winapi::um::wincon::ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+
+    unsafe {
+        let std_out = GetStdHandle(STD_OUTPUT_HANDLE);
+        let mut mode = 0;
+        winapi::um::consoleapi::GetConsoleMode(std_out, &mut mode);
+        SetConsoleMode(std_out, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    }
 }
