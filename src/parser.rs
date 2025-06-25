@@ -1,5 +1,6 @@
 use crate::net::Net;
 use anyhow::{Result, anyhow, bail};
+use owo_colors::OwoColorize;
 use regex::Regex;
 use std::{net::Ipv4Addr, sync::LazyLock};
 
@@ -43,7 +44,11 @@ pub fn del_addr(net: &Net, param: Option<&str>) -> Result<()> {
 
 pub fn list_addrs(net: &Net) -> Result<()> {
     for (idx, addr) in net.get_addrs()?.iter().enumerate() {
-        println!("{} - {}", idx + 1, addr);
+        println!("{} - {}", (idx + 1).cyan(), addr);
     }
     Ok(())
+}
+
+pub fn print_help() {
+    println!("");
 }

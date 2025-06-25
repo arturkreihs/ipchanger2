@@ -1,5 +1,6 @@
 use std::{io, io::Write};
 
+use owo_colors::OwoColorize;
 use anyhow::Result;
 
 mod settings;
@@ -33,7 +34,7 @@ fn main() -> Result<()> {
     // main loop
     let mut line = String::new();
     loop {
-        print!("ipchanger> ");
+        print!("{}", "ipchanger> ".yellow());
         line.clear();
 
         // reading line
@@ -50,7 +51,7 @@ fn main() -> Result<()> {
             Some("d") => parser::del_addr(&net, param).map(|_| true),
             Some("l") => parser::list_addrs(&net).map(|_| true),
             Some(_) | None => {
-                println!("unknown command");
+                println!("{}", "unknown command".red());
                 Ok(true)
             }
         };
@@ -58,7 +59,7 @@ fn main() -> Result<()> {
         match result {
             Ok(false) => break,
             Ok(true) => continue,
-            Err(e) => eprintln!("{e}"),
+            Err(e) => eprintln!("{}", e.red()),
         }
     }
 
