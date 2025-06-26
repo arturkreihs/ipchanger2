@@ -12,14 +12,10 @@ static IP_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 pub fn add_addr(net: &Net, param: Option<&str>) -> Result<()> {
     let param = param.ok_or(anyhow!("no address provided"))?;
     let (addr, mask) = match IP_REGEX.captures(param) {
-        None => {
-            return Err(anyhow!("invalid address format, try ip_addr/mask"));
-        }
+        None => return Err(anyhow!("invalid address format, try ip_addr/mask")),
         Some(caps) => match (caps.get(1), caps.get(2)) {
             (Some(addr), Some(mask)) => (addr.as_str(), mask.as_str()),
-            _ => {
-                return Err(anyhow!("addr or mask is invalid"));
-            }
+            _ => return Err(anyhow!("addr or mask is invalid")),
         },
     };
     let addr: Ipv4Addr = addr.parse()?;
