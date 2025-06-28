@@ -20,12 +20,12 @@ fn main() -> Result<()> {
             settings::save(&settings::Settings::default())?;
 
             // print interfaces and MACs
-            for (_, mac) in Net::list_ifaces()? {
+            for (_, (mac, name)) in Net::list_ifaces()? {
                 let mac = mac.iter().fold(String::new(), |mut acc, &byte| {
                     acc.push_str(&format!("{:02x}", byte));
                     acc
                 });
-                println!("{mac}");
+                println!("{mac} - {name}");
             }
             return Ok(());
         }

@@ -14,22 +14,22 @@ impl Net {
         let list = Self::list_ifaces()?;
         let entry = list
             .iter()
-            .find(|&(_, v)| v == &mac)
+            .find(|&(_, v)| v.0 == mac)
             .ok_or(NetError::NotFound)?;
         let idx = *entry.0;
         Ok(Net { idx, mask_db })
     }
 
-    pub fn list_ifaces() -> Result<HashMap<u32, [u8; 6]>, NetError> {
+    pub fn list_ifaces() -> Result<HashMap<u32, ([u8; 6], String)>, NetError> {
         let ifaces = netwatcher::list_interfaces()?;
         let ifaces = ifaces
             .into_iter()
             .filter_map(|(k, v)| {
                 Self::parse_mac(&v.hw_addr.replace(":", ""))
-                    .map(|m| (k, m))
+                    .map(|m| (k, (m, v.name)))
                     .ok()
             })
-            .collect::<HashMap<u32, [u8; 6]>>();
+            .collect::<HashMap<u32, ([u8; 6], String)>>();
         Ok(ifaces)
     }
 
