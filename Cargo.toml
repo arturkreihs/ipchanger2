@@ -10,6 +10,7 @@ netwatcher = "0.1.0"
 owo-colors = { version = "4.2.2", default-features = false }
 regex = { version = "1.11.1", default-features = false, features = ["std"] }
 serde = { version = "1.0.219", features = ["derive"] }
+sled = { version = "0.34.7", default-features = false }
 thiserror = "2.0.12"
 toml = "0.8.23"
 winapi = { version = "0.3.9", features = ["consoleapi", "processenv", "winbase"] }

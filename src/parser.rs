@@ -31,20 +31,23 @@ pub fn del_addr(net: &Net, param: Option<&str>) -> Result<()> {
     }
     let idx = idx - 1;
     net.del_addr(
-        net.get_addrs()?
+        &net.get_addrs()?
             .get(idx as usize)
-            .ok_or(anyhow!("getting address"))?,
+            .ok_or(anyhow!("getting address"))?
+            .0,
     )?;
     Ok(())
 }
 
 pub fn list_addrs(net: &Net) -> Result<()> {
     for (idx, addr) in net.get_addrs()?.iter().enumerate() {
-        println!("{} - {}", (idx + 1).cyan(), addr);
+        println!(
+            "{} - {}{}{}",
+            (idx + 1).cyan(),
+            addr.0,
+            "/".bright_black(),
+            addr.1.bright_black()
+        );
     }
     Ok(())
 }
-
-// pub fn print_help() {
-//     println!("");
-// }

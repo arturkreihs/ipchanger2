@@ -1,7 +1,7 @@
 use std::{io, io::Write};
 
+use anyhow::{Result, anyhow};
 use owo_colors::OwoColorize;
-use anyhow::{anyhow, Result};
 
 mod settings;
 
@@ -20,7 +20,7 @@ fn main() -> Result<()> {
             settings::save(&settings::Settings::default())?;
 
             // print interfaces and MACs
-            for (_, mac) in Net::list()? {
+            for (_, mac) in Net::list_ifaces()? {
                 let mac = mac.iter().fold(String::new(), |mut acc, &byte| {
                     acc.push_str(&format!("{:02x}", byte));
                     acc

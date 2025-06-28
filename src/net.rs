@@ -4,21 +4,23 @@ use std::process::Command;
 
 pub struct Net {
     idx: u32,
+    mask_db: sled::Db,
 }
 
 impl Net {
     pub fn new(mac: &str) -> Result<Self, NetError> {
+        let mask_db = sled::open("mask.db")?;
         let mac = Self::parse_mac(mac)?;
-        let list = Self::list()?;
+        let list = Self::list_ifaces()?;
         let entry = list
             .iter()
             .find(|&(_, v)| v == &mac)
             .ok_or(NetError::NotFound)?;
         let idx = *entry.0;
-        Ok(Net { idx })
+        Ok(Net { idx, mask_db })
     }
 
-    pub fn list() -> Result<HashMap<u32, [u8; 6]>, NetError> {
+    pub fn list_ifaces() -> Result<HashMap<u32, [u8; 6]>, NetError> {
         let ifaces = netwatcher::list_interfaces()?;
         let ifaces = ifaces
             .into_iter()
@@ -31,10 +33,17 @@ impl Net {
         Ok(ifaces)
     }
 
-    pub fn get_addrs(&self) -> Result<Vec<std::net::Ipv4Addr>, NetError> {
+    pub fn get_addrs(&self) -> Result<Vec<(std::net::Ipv4Addr, u8)>, NetError> {
         let ifaces = netwatcher::list_interfaces()?;
         let iface = ifaces.get(&self.idx).ok_or(NetError::NotFound)?;
-        Ok(iface.ipv4_ips().cloned().collect())
+        Ok(iface
+            .ipv4_ips()
+            .cloned()
+            .filter_map(|ip| {
+                let mask = self.mask_db.get(ip.octets()).ok()??;
+                Some((ip, mask[0]))
+            })
+            .collect())
     }
 
     pub fn add_addr(&self, addr: &Ipv4Addr, mask: u8) -> Result<(), NetError> {
@@ -47,6 +56,9 @@ impl Net {
             .arg(format!("address={}", addr))
             .arg(format!("mask={}", Self::parse_mask(mask)?))
             .output()?;
+        let mask = sled::IVec::from(&[mask]);
+        self.mask_db.insert(addr.octets(), mask)?;
+        self.mask_db.flush()?;
         Ok(())
     }
 
@@ -59,6 +71,8 @@ impl Net {
             .arg(format!("name={}", self.idx))
             .arg(format!("address={}", addr))
             .output()?;
+        self.mask_db.remove(addr.octets())?;
+        self.mask_db.flush()?;
         Ok(())
     }
 
@@ -100,4 +114,6 @@ pub enum NetError {
     MaskConvert,
     #[error(transparent)]
     ParseInt(#[from] std::num::ParseIntError),
+    #[error(transparent)]
+    Sled(#[from] sled::Error),
 }
