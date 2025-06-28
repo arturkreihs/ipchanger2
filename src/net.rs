@@ -53,7 +53,7 @@ impl Net {
             .arg("add")
             .arg("address")
             .arg(format!("name={}", self.idx))
-            .arg(format!("address={}", addr))
+            .arg(format!("address={addr}"))
             .arg(format!("mask={}", Self::parse_mask(mask)?))
             .output()?;
         let mask = sled::IVec::from(&[mask]);
@@ -69,7 +69,7 @@ impl Net {
             .arg("delete")
             .arg("address")
             .arg(format!("name={}", self.idx))
-            .arg(format!("address={}", addr))
+            .arg(format!("address={addr}"))
             .output()?;
         self.mask_db.remove(addr.octets())?;
         self.mask_db.flush()?;

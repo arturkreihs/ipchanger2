@@ -22,7 +22,7 @@ fn main() -> Result<()> {
             // print interfaces and MACs
             for (_, (mac, name)) in Net::list_ifaces()? {
                 let mac = mac.iter().fold(String::new(), |mut acc, &byte| {
-                    acc.push_str(&format!("{:02x}", byte));
+                    acc.push_str(&format!("{byte:02x}"));
                     acc
                 });
                 println!("{mac} - {name}");
