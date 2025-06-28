@@ -1,6 +1,6 @@
 use std::{io, io::Write};
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use owo_colors::OwoColorize;
 
 mod settings;
@@ -46,13 +46,19 @@ fn main() -> Result<()> {
 
         // executing cmd
         let cmd = line.get(0..1);
-        let param = line.get(1..);
+        let param = line.get(1..).filter(|&p| !p.is_empty());
         let result = match cmd {
+            None => continue,
             Some("q") => Ok(false),
-            Some("a") => parser::add_addr(&net, param).map(|_| true),
-            Some("d") => parser::del_addr(&net, param).map(|_| true),
-            Some("l") => parser::list_addrs(&net).map(|_| true),
-            Some(_) | None => Err(anyhow!("unknown command")),
+            Some(cmd) => {
+                let func = match cmd {
+                    "l" => parser::list_addrs,
+                    "a" => parser::add_addr,
+                    "d" => parser::del_addr,
+                    _ => parser::help,
+                };
+                func(&net, param).map(|_| true)
+            }
         };
 
         match result {

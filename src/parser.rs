@@ -25,7 +25,7 @@ pub fn add_addr(net: &Net, param: Option<&str>) -> Result<()> {
 }
 
 pub fn del_addr(net: &Net, param: Option<&str>) -> Result<()> {
-    let idx: u8 = param.ok_or(anyhow!("no addr provided"))?.parse()?;
+    let idx: u8 = param.ok_or(anyhow!("no address index provided"))?.parse()?;
     if idx == 0 {
         bail!("idx is 0");
     }
@@ -39,7 +39,10 @@ pub fn del_addr(net: &Net, param: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-pub fn list_addrs(net: &Net) -> Result<()> {
+pub fn list_addrs(net: &Net, param: Option<&str>) -> Result<()> {
+    if param.is_some() {
+        bail!("list command shouldn't have any arguments");
+    }
     for (idx, addr) in net.get_addrs()?.iter().enumerate() {
         let mask = addr
             .1
@@ -53,5 +56,9 @@ pub fn list_addrs(net: &Net) -> Result<()> {
             .unwrap();
         println!("{} - {}{}", (idx + 1).cyan(), addr.0, mask.bright_black());
     }
+    Ok(())
+}
+
+pub fn help(_: &Net, _: Option<&str>) -> Result<()> {
     Ok(())
 }
