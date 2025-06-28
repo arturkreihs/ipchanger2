@@ -41,13 +41,17 @@ pub fn del_addr(net: &Net, param: Option<&str>) -> Result<()> {
 
 pub fn list_addrs(net: &Net) -> Result<()> {
     for (idx, addr) in net.get_addrs()?.iter().enumerate() {
-        println!(
-            "{} - {}{}{}",
-            (idx + 1).cyan(),
-            addr.0,
-            "/".bright_black(),
-            addr.1.bright_black()
-        );
+        let mask = addr
+            .1
+            .map(|m| m.to_string())
+            .or_else(|| Some("?".into()))
+            .map(|m| {
+                let mut m = m;
+                m.insert(0, '/');
+                m
+            })
+            .unwrap();
+        println!("{} - {}{}", (idx + 1).cyan(), addr.0, mask.bright_black());
     }
     Ok(())
 }

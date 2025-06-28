@@ -9,7 +9,7 @@ pub struct Net {
 
 impl Net {
     pub fn new(mac: &str) -> Result<Self, NetError> {
-        let mask_db = sled::open("mask.db")?;
+        let mask_db = sled::open("masks")?;
         let mac = Self::parse_mac(mac)?;
         let list = Self::list_ifaces()?;
         let entry = list
@@ -33,15 +33,15 @@ impl Net {
         Ok(ifaces)
     }
 
-    pub fn get_addrs(&self) -> Result<Vec<(std::net::Ipv4Addr, u8)>, NetError> {
+    pub fn get_addrs(&self) -> Result<Vec<(std::net::Ipv4Addr, Option<u8>)>, NetError> {
         let ifaces = netwatcher::list_interfaces()?;
         let iface = ifaces.get(&self.idx).ok_or(NetError::NotFound)?;
         Ok(iface
             .ipv4_ips()
             .cloned()
             .filter_map(|ip| {
-                let mask = self.mask_db.get(ip.octets()).ok()??;
-                Some((ip, mask[0]))
+                let mask = self.mask_db.get(ip.octets()).ok()?.map(|m| m[0]);
+                Some((ip, mask))
             })
             .collect())
     }
