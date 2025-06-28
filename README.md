@@ -19,3 +19,4 @@ After configuring the app, run it with administrator privileges. The IPChanger c
 - **`l`** - Display current IP addresses
 - **`a`** - Add an IP address with subnet mask (example: `a192.168.2.22/24`)
 - **`d`** - Remove an IP address by index number (example: `d2` removes the IP address at position 2)
+- **`q`** - Quit the app
