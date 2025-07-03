@@ -40,7 +40,8 @@ impl Net {
             .ipv4_ips()
             .cloned()
             .filter_map(|ip| {
-                let mask = self.mask_db.get(ip.octets()).ok()?.map(|m| m[0]);
+                let mask = self.mask_db
+                    .get(ip.octets()).ok().unwrap_or(None).map(|m|m[0]);
                 Some((ip, mask))
             })
             .collect())
