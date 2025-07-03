@@ -39,10 +39,10 @@ impl Net {
         Ok(iface
             .ipv4_ips()
             .cloned()
-            .filter_map(|ip| {
+            .map(|ip| {
                 let mask = self.mask_db
-                    .get(ip.octets()).ok().unwrap_or(None).map(|m|m[0]);
-                Some((ip, mask))
+                    .get(ip.octets()).unwrap_or(None).map(|m|m[0]);
+                (ip, mask)
             })
             .collect())
     }
