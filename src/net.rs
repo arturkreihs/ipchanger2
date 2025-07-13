@@ -86,6 +86,36 @@ impl Net {
             .map_err(|_| NetError::Gateway)
     }
 
+    pub fn set_gateway(&self, gateway: &Ipv4Addr) -> Result<(), NetError> {
+        // let cmd: Box<dyn Fn(&str) -> Command> = Box::new(|m| {
+        //     Command::new("netsh")
+        //         .arg("interface")
+        //         .arg("ip")
+        //         .arg("del")
+        //         .arg("route")
+        //         .arg("0.0.0.0/0")
+        //         .arg(format!("{}", self.idx))
+        // });
+        Command::new("netsh")
+            .arg("interface")
+            .arg("ip")
+            .arg("del")
+            .arg("route")
+            .arg("0.0.0.0/0")
+            .arg(format!("{}", self.idx))
+            .output()?;
+        Command::new("netsh")
+            .arg("interface")
+            .arg("ip")
+            .arg("add")
+            .arg("route")
+            .arg("0.0.0.0/0")
+            .arg(format!("{}", self.idx))
+            .arg(format!("{gateway}"))
+            .output()?;
+        Ok(())
+    }
+
     fn parse_mac(mac: &str) -> Result<[u8; 6], NetError> {
         if mac.len() != 12 {
             return Err(NetError::MacConvert);

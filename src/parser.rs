@@ -59,10 +59,13 @@ pub fn list_addrs(net: &Net, param: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-pub fn gateway(_: &Net, param: Option<&str>) -> Result<()> {
-    if param.is_none() {
-        let ip = Net::get_gateway()?;
-        println!("{ip}");
+pub fn gateway(net: &Net, param: Option<&str>) -> Result<()> {
+    match param {
+        None => println!("{}", Net::get_gateway()?),
+        Some(p) => {
+            net.set_gateway(&p.parse()?)?;
+            gateway(net, None)?;
+        }
     }
     Ok(())
 }
