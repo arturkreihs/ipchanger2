@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.98"
 config = { version = "0.15.11", default-features = false, features = ["toml"] }
+default-net = { version = "0.22.0", default-features = false }
 netwatcher = "0.1.0"
 owo-colors = { version = "4.2.2", default-features = false }
 regex = { version = "1.11.1", default-features = false, features = ["std"] }

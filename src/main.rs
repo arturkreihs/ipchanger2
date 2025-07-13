@@ -55,6 +55,7 @@ fn main() -> Result<()> {
                     "l" => parser::list_addrs,
                     "a" => parser::add_addr,
                     "d" => parser::del_addr,
+                    "g" => parser::gateway,
                     _ => parser::help,
                 };
                 func(&net, param).map(|_| true)

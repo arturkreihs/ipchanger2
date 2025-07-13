@@ -59,6 +59,15 @@ pub fn list_addrs(net: &Net, param: Option<&str>) -> Result<()> {
     Ok(())
 }
 
+pub fn gateway(_: &Net, param: Option<&str>) -> Result<()> {
+    if param.is_none() {
+        let ip = Net::get_gateway()?;
+        println!("{ip}");
+    }
+    Ok(())
+}
+
+// todo: list commands
 pub fn help(_: &Net, _: Option<&str>) -> Result<()> {
     Ok(())
 }

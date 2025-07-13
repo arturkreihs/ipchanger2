@@ -40,8 +40,7 @@ impl Net {
             .ipv4_ips()
             .cloned()
             .map(|ip| {
-                let mask = self.mask_db
-                    .get(ip.octets()).unwrap_or(None).map(|m|m[0]);
+                let mask = self.mask_db.get(ip.octets()).unwrap_or(None).map(|m| m[0]);
                 (ip, mask)
             })
             .collect())
@@ -75,6 +74,16 @@ impl Net {
         self.mask_db.remove(addr.octets())?;
         self.mask_db.flush()?;
         Ok(())
+    }
+
+    pub fn get_gateway() -> Result<std::net::Ipv4Addr, NetError> {
+        use default_net::get_default_gateway;
+        get_default_gateway()
+            .map(|g| match g.ip_addr {
+                std::net::IpAddr::V4(ip) => ip,
+                _ => 0.into(),
+            })
+            .map_err(|_| NetError::Gateway)
     }
 
     fn parse_mac(mac: &str) -> Result<[u8; 6], NetError> {
@@ -117,4 +126,6 @@ pub enum NetError {
     ParseInt(#[from] std::num::ParseIntError),
     #[error(transparent)]
     Sled(#[from] sled::Error),
+    #[error("can't get gateway IP address")]
+    Gateway,
 }
