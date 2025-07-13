@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
-use std::process::Command;
+use std::process::{Command, Output};
 
 pub struct Net {
     idx: u32,
@@ -83,36 +83,24 @@ impl Net {
                 std::net::IpAddr::V4(ip) => ip,
                 _ => 0.into(),
             })
-            .map_err(|_| NetError::Gateway)
+            .map_err(|_| NetError::GetGateway)
     }
 
     pub fn set_gateway(&self, gateway: &Ipv4Addr) -> Result<(), NetError> {
-        // let cmd: Box<dyn Fn(&str) -> Command> = Box::new(|m| {
-        //     Command::new("netsh")
-        //         .arg("interface")
-        //         .arg("ip")
-        //         .arg("del")
-        //         .arg("route")
-        //         .arg("0.0.0.0/0")
-        //         .arg(format!("{}", self.idx))
-        // });
-        Command::new("netsh")
-            .arg("interface")
-            .arg("ip")
-            .arg("del")
-            .arg("route")
-            .arg("0.0.0.0/0")
-            .arg(format!("{}", self.idx))
-            .output()?;
-        Command::new("netsh")
-            .arg("interface")
-            .arg("ip")
-            .arg("add")
-            .arg("route")
-            .arg("0.0.0.0/0")
-            .arg(format!("{}", self.idx))
-            .arg(format!("{gateway}"))
-            .output()?;
+        let cmd = |act: &str, args: &str| -> Result<Output, NetError> {
+            Command::new("netsh")
+                .arg("interface")
+                .arg("ip")
+                .arg(act)
+                .arg("route")
+                .arg("0.0.0.0/0")
+                .arg(self.idx.to_string())
+                .arg(args)
+                .output()
+                .map_err(|_| NetError::SetGateway)
+        };
+        cmd("del", "")?;
+        cmd("add", &gateway.to_string())?;
         Ok(())
     }
 
@@ -157,5 +145,7 @@ pub enum NetError {
     #[error(transparent)]
     Sled(#[from] sled::Error),
     #[error("can't get gateway IP address")]
-    Gateway,
+    GetGateway,
+    #[error("can't set gateway IP address")]
+    SetGateway,
 }
