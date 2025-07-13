@@ -36,14 +36,16 @@ impl Net {
     pub fn get_addrs(&self) -> Result<Vec<(std::net::Ipv4Addr, Option<u8>)>, NetError> {
         let ifaces = netwatcher::list_interfaces()?;
         let iface = ifaces.get(&self.idx).ok_or(NetError::NotFound)?;
-        Ok(iface
+        let mut vec = iface
             .ipv4_ips()
             .cloned()
             .map(|ip| {
                 let mask = self.mask_db.get(ip.octets()).unwrap_or(None).map(|m| m[0]);
                 (ip, mask)
             })
-            .collect())
+            .collect::<Vec<(Ipv4Addr, Option<u8>)>>();
+        vec.sort_by_key(|&(ip, _)| ip);
+        Ok(vec)
     }
 
     pub fn add_addr(&self, addr: &Ipv4Addr, mask: u8) -> Result<(), NetError> {
