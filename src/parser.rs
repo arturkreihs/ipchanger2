@@ -2,12 +2,17 @@ use crate::net::Net;
 use anyhow::{Result, anyhow, bail};
 use owo_colors::OwoColorize;
 use regex::Regex;
-use std::{net::Ipv4Addr, sync::LazyLock};
+use std::{
+    net::Ipv4Addr,
+    sync::{LazyLock, Mutex},
+};
 
 static IP_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))/([0-9]|[1-2][0-9]|3[0-2])$")
         .unwrap()
 });
+
+static IP_CACHE: Mutex<Vec<Ipv4Addr>> = Mutex::new(vec![]);
 
 pub fn add_addr(net: &Net, param: Option<&str>) -> Result<()> {
     let param = param.ok_or(anyhow!("no address provided"))?;
@@ -30,12 +35,13 @@ pub fn del_addr(net: &Net, param: Option<&str>) -> Result<()> {
         bail!("idx is 0");
     }
     let idx = idx - 1;
-    net.del_addr(
-        &net.get_addrs()?
-            .get(idx as usize)
-            .ok_or(anyhow!("getting address"))?
-            .0,
-    )?;
+    let ip = IP_CACHE
+        .lock()
+        .map_err(|_| anyhow!("cannot lock IP_CACHE for deleting"))?;
+    let ip = ip
+        .get(idx as usize)
+        .ok_or(anyhow!("cannot get address by id"))?;
+    net.del_addr(ip)?;
     Ok(())
 }
 
@@ -43,6 +49,10 @@ pub fn list_addrs(net: &Net, param: Option<&str>) -> Result<()> {
     if param.is_some() {
         bail!("list command shouldn't have any arguments");
     }
+    IP_CACHE
+        .lock()
+        .map_err(|_| anyhow!("cannot lock IP_CACHE for clearing"))?
+        .clear();
     for (idx, addr) in net.get_addrs()?.iter().enumerate() {
         let mask = addr
             .1
@@ -55,6 +65,10 @@ pub fn list_addrs(net: &Net, param: Option<&str>) -> Result<()> {
             })
             .unwrap();
         println!("{} - {}{}", (idx + 1).cyan(), addr.0, mask.bright_black());
+        IP_CACHE
+            .lock()
+            .map_err(|_| anyhow!("cannot lock IP_CACHE for pushing"))?
+            .push(addr.0);
     }
     Ok(())
 }
