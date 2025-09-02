@@ -26,6 +26,7 @@ pub fn add_addr(net: &Net, param: Option<&str>) -> Result<()> {
     let addr: Ipv4Addr = addr.parse()?;
     let mask: u8 = mask.parse()?;
     net.add_addr(&addr, mask)?;
+    list_addrs(net, None)?;
     Ok(())
 }
 
@@ -35,13 +36,16 @@ pub fn del_addr(net: &Net, param: Option<&str>) -> Result<()> {
         bail!("idx is 0");
     }
     let idx = idx - 1;
-    let ip = IP_CACHE
-        .lock()
-        .map_err(|_| anyhow!("cannot lock IP_CACHE for deleting"))?;
-    let ip = ip
-        .get(idx as usize)
-        .ok_or(anyhow!("cannot get address by id"))?;
-    net.del_addr(ip)?;
+    {
+        let ip = IP_CACHE
+            .lock()
+            .map_err(|_| anyhow!("cannot lock IP_CACHE for deleting"))?;
+        let ip = ip
+            .get(idx as usize)
+            .ok_or(anyhow!("cannot get address by id"))?;
+        net.del_addr(ip)?;
+    } // releasing lock for IP_CACHE
+    list_addrs(net, None)?;
     Ok(())
 }
 
