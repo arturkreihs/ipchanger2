@@ -36,15 +36,15 @@ pub fn del_addr(net: &Net, param: Option<&str>) -> Result<()> {
         bail!("idx is 0");
     }
     let idx = idx - 1;
-    {
+    let ip = {
         let ip = IP_CACHE
             .lock()
             .map_err(|_| anyhow!("cannot lock IP_CACHE for deleting"))?;
-        let ip = ip
+        ip
             .get(idx as usize)
-            .ok_or(anyhow!("cannot get address by id"))?;
-        net.del_addr(ip)?;
-    } // releasing lock for IP_CACHE
+            .ok_or(anyhow!("cannot get address by id"))?.clone()
+    };
+    net.del_addr(&ip)?;
     list_addrs(net, None)?;
     Ok(())
 }
