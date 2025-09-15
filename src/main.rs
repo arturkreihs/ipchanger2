@@ -51,13 +51,12 @@ fn main() -> Result<()> {
             None => continue,
             Some("q") => Ok(false),
             Some(cmd) => {
-                let func = match cmd {
-                    "l" => parser::list_addrs,
-                    "a" => parser::add_addr,
-                    "d" => parser::del_addr,
-                    "g" => parser::gateway,
-                    _ => parser::help,
-                };
+                let ch = cmd.chars().next().unwrap();
+                let func = parser::COMMANDS_SLICE
+                    .iter()
+                    .find(|c| c.key == ch)
+                    .map(|c| c.func)
+                    .unwrap_or(parser::help);
                 func(&net, param).map(|_| true)
             }
         };
