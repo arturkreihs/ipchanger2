@@ -1,6 +1,6 @@
 use std::{io, io::Write};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use owo_colors::OwoColorize;
 
 mod settings;
@@ -51,10 +51,10 @@ fn main() -> Result<()> {
             None => continue,
             Some("q") => Ok(false),
             Some(cmd) => {
-                let ch = cmd.chars().next().unwrap();
+                let ch = cmd.chars().next().ok_or(anyhow!("can't get character"))?;
                 let func = parser::COMMANDS_SLICE
                     .iter()
-                    .find(|c| c.key == ch)
+                    .find(|&c| c.key == ch)
                     .map(|c| c.func)
                     .unwrap_or(parser::help);
                 func(&net, param).map(|_| true)

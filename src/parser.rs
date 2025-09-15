@@ -7,7 +7,6 @@ use std::{
     sync::{LazyLock, Mutex},
 };
 
-// Command registry types and slice for collecting help/metadata about commands
 pub type CommandFn = fn(&Net, Option<&str>) -> Result<()>;
 
 pub struct Command {
@@ -83,8 +82,7 @@ pub fn list_addrs(net: &Net, param: Option<&str>) -> Result<()> {
                 let mut m = m;
                 m.insert(0, '/');
                 m
-            })
-            .unwrap();
+            }).ok_or(anyhow!("can't get mask"))?;
         println!("{} - {}{}", (idx + 1).cyan(), addr.0, mask.bright_black());
         IP_CACHE
             .lock()
@@ -107,7 +105,6 @@ pub fn gateway(net: &Net, param: Option<&str>) -> Result<()> {
 }
 
 #[ipchanger_macros::command(key = 'h', name = "help", usage = "h", description = "Show this help")]
-// todo: list commands
 pub fn help(_: &Net, _: Option<&str>) -> Result<()> {
     println!("Available commands:");
     for cmd in COMMANDS_SLICE {
