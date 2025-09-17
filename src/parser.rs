@@ -92,17 +92,17 @@ pub fn list_addrs(net: &Net, param: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-#[ipchanger_macros::command(key = 'g', name = "gateway", usage = "g or g<ip>", description = "Show current gateway or set a new one")]
-pub fn gateway(net: &Net, param: Option<&str>) -> Result<()> {
-    match param {
-        None => println!("{}", Net::get_gateway()?),
-        Some(p) => {
-            net.set_gateway(&p.parse()?)?;
-            gateway(net, None)?;
-        }
-    }
-    Ok(())
-}
+// #[ipchanger_macros::command(key = 'g', name = "gateway", usage = "g or g<ip>", description = "Show current gateway or set a new one")]
+// pub fn gateway(net: &Net, param: Option<&str>) -> Result<()> {
+//     match param {
+//         None => println!("{}", Net::get_gateway()?),
+//         Some(p) => {
+//             net.set_gateway(&p.parse()?)?;
+//             gateway(net, None)?;
+//         }
+//     }
+//     Ok(())
+// }
 
 #[ipchanger_macros::command(key = 'h', name = "help", usage = "h", description = "Show this help")]
 pub fn help(_: &Net, _: Option<&str>) -> Result<()> {

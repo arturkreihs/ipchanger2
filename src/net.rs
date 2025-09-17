@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
-use std::process::{Command, Output};
+use std::process::Command;
+// use std::process::{Command, Output};
 
 pub struct Net {
     idx: u32,
@@ -78,33 +79,33 @@ impl Net {
         Ok(())
     }
 
-    pub fn get_gateway() -> Result<std::net::Ipv4Addr, NetError> {
-        use default_net::get_default_gateway;
-        get_default_gateway()
-            .map(|g| match g.ip_addr {
-                std::net::IpAddr::V4(ip) => ip,
-                _ => 0.into(),
-            })
-            .map_err(|_| NetError::GetGateway)
-    }
+    // pub fn get_gateway() -> Result<std::net::Ipv4Addr, NetError> {
+    //     use default_net::get_default_gateway;
+    //     get_default_gateway()
+    //         .map(|g| match g.ip_addr {
+    //             std::net::IpAddr::V4(ip) => ip,
+    //             _ => 0.into(),
+    //         })
+    //         .map_err(|_| NetError::GetGateway)
+    // }
 
-    pub fn set_gateway(&self, gateway: &Ipv4Addr) -> Result<(), NetError> {
-        let cmd = |act: &str, args: &str| -> Result<Output, NetError> {
-            Command::new("netsh")
-                .arg("interface")
-                .arg("ip")
-                .arg(act)
-                .arg("route")
-                .arg("0.0.0.0/0")
-                .arg(self.idx.to_string())
-                .arg(args)
-                .output()
-                .map_err(|_| NetError::SetGateway)
-        };
-        cmd("del", "")?;
-        cmd("add", &gateway.to_string())?;
-        Ok(())
-    }
+    // pub fn set_gateway(&self, gateway: &Ipv4Addr) -> Result<(), NetError> {
+    //     let cmd = |act: &str, args: &str| -> Result<Output, NetError> {
+    //         Command::new("netsh")
+    //             .arg("interface")
+    //             .arg("ip")
+    //             .arg(act)
+    //             .arg("route")
+    //             .arg("0.0.0.0/0")
+    //             .arg(self.idx.to_string())
+    //             .arg(args)
+    //             .output()
+    //             .map_err(|_| NetError::SetGateway)
+    //     };
+    //     cmd("del", "")?;
+    //     cmd("add", &gateway.to_string())?;
+    //     Ok(())
+    // }
 
     fn parse_mac(mac: &str) -> Result<[u8; 6], NetError> {
         if mac.len() != 12 {
@@ -146,8 +147,8 @@ pub enum NetError {
     ParseInt(#[from] std::num::ParseIntError),
     #[error(transparent)]
     Sled(#[from] sled::Error),
-    #[error("can't get gateway IP address")]
-    GetGateway,
-    #[error("can't set gateway IP address")]
-    SetGateway,
+    // #[error("can't get gateway IP address")]
+    // GetGateway,
+    // #[error("can't set gateway IP address")]
+    // SetGateway,
 }
