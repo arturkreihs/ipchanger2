@@ -20,10 +20,10 @@ jobs:
     - uses: milliewalky/setup-7-zip@v2
     
     # Pack binary as 7z archive
-    - run: 7z a -t7z release.7z ./target/x86_64-pc-windows-msvc/release/mybinary
+    - run: 7z a -t7z ipchanger.7z ./target/x86_64-pc-windows-msvc/release/ipchanger.exe
     
     # Create GitHub release and upload artifact
     - uses: ncipollo/release-action@v1
       with:
-        artifacts: release.7z
+        artifacts: ipchanger.7z
         token: ${{ secrets.GITHUB_TOKEN }}
