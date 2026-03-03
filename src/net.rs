@@ -1,10 +1,9 @@
-use std::collections::HashMap;
 use std::net::Ipv4Addr;
-use std::process::Command;
-// use std::process::{Command, Output};
+use std::process::{Command, Output};
 
 pub struct Net {
-    idx: u32,
+    pub idx: u32,
+    pub name: String,
     mask_db: sled::Db,
 }
 
@@ -15,22 +14,23 @@ impl Net {
         let list = Self::list_ifaces()?;
         let entry = list
             .iter()
-            .find(|&(_, v)| v.0 == mac)
+            .find(|&(_, _, v)| *v == mac)
             .ok_or(NetError::NotFound)?;
-        let idx = *entry.0;
-        Ok(Net { idx, mask_db })
+        let idx = entry.0;
+        let name = entry.1.clone();
+        Ok(Net { idx, name, mask_db })
     }
 
-    pub fn list_ifaces() -> Result<HashMap<u32, ([u8; 6], String)>, NetError> {
+    pub fn list_ifaces() -> Result<Vec<(u32, String, [u8; 6])>, NetError> {
         let ifaces = netwatcher::list_interfaces()?;
         let ifaces = ifaces
             .into_iter()
-            .filter_map(|(k, v)| {
+            .filter_map(|(_, v)| {
                 Self::parse_mac(&v.hw_addr.replace(":", ""))
-                    .map(|m| (k, (m, v.name)))
+                    .map(|m| (v.index, v.name, m))
                     .ok()
             })
-            .collect::<HashMap<u32, ([u8; 6], String)>>();
+            .collect::<Vec<(u32, String, [u8; 6])>>();
         Ok(ifaces)
     }
 
@@ -55,10 +55,11 @@ impl Net {
             .arg("ipv4")
             .arg("add")
             .arg("address")
-            .arg(format!("name={}", self.idx))
+            .arg(format!("name={}", self.name))
             .arg(format!("address={addr}"))
             .arg(format!("mask={}", Self::parse_mask(mask)?))
-            .output()?;
+            .output()
+            .and_then(Self::output_handler("netsh"))?;
         let mask = sled::IVec::from(&[mask]);
         self.mask_db.insert(addr.octets(), mask)?;
         self.mask_db.flush()?;
@@ -71,9 +72,10 @@ impl Net {
             .arg("ipv4")
             .arg("delete")
             .arg("address")
-            .arg(format!("name={}", self.idx))
+            .arg(format!("name={}", self.name))
             .arg(format!("address={addr}"))
-            .output()?;
+            .output()
+            .and_then(Self::output_handler("netsh"))?;
         self.mask_db.remove(addr.octets())?;
         self.mask_db.flush()?;
         Ok(())
@@ -106,6 +108,14 @@ impl Net {
     //     cmd("add", &gateway.to_string())?;
     //     Ok(())
     // }
+
+    fn output_handler(err: &'static str) -> impl Fn(Output) -> Result<(), std::io::Error> {
+        move |o| {
+            o.status.success()
+                .then_some(())
+                .ok_or_else(|| std::io::Error::other(err))
+        }
+    }
 
     fn parse_mac(mac: &str) -> Result<[u8; 6], NetError> {
         if mac.len() != 12 {

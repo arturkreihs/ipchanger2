@@ -1,4 +1,4 @@
-use std::{io, io::Write};
+use std::io::{self, BufRead, Write};
 
 use anyhow::{anyhow, Result};
 use owo_colors::OwoColorize;
@@ -20,18 +20,21 @@ fn main() -> Result<()> {
             settings::save(&settings::Settings::default())?;
 
             // print interfaces and MACs
-            for (_, (mac, name)) in Net::list_ifaces()? {
+            for (_, name, mac) in Net::list_ifaces()? {
                 let mac = mac.iter().fold(String::new(), |mut acc, &byte| {
                     acc.push_str(&format!("{byte:02x}"));
                     acc
                 });
                 println!("{mac} - {name}");
             }
+            println!("\nPress Enter to exit...");
+            io::stdin().lock().read_line(&mut String::new())?;
             return Ok(());
         }
     };
 
     let net = Net::new(&settings.mac)?;
+    // println!("Network index = {}", net.idx);
 
     // main loop
     let mut line = String::new();
