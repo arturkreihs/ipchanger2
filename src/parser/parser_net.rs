@@ -7,19 +7,6 @@ use std::{
     sync::{LazyLock, Mutex},
 };
 
-pub type CommandFn = fn(&Net, Option<&str>) -> Result<()>;
-
-pub struct Command {
-    pub key: char,
-    pub name: &'static str,
-    pub usage: &'static str,
-    pub description: &'static str,
-    pub func: CommandFn,
-}
-
-#[linkme::distributed_slice]
-pub static COMMANDS_SLICE: [Command] = [..];
-
 static IP_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))/([0-9]|[1-2][0-9]|3[0-2])$")
         .unwrap()
@@ -88,27 +75,6 @@ pub fn list_addrs(net: &Net, param: Option<&str>) -> Result<()> {
             .lock()
             .map_err(|_| anyhow!("cannot lock IP_CACHE for pushing"))?
             .push(addr.0);
-    }
-    Ok(())
-}
-
-// #[ipchanger_macros::command(key = 'g', name = "gateway", usage = "g or g<ip>", description = "Show current gateway or set a new one")]
-// pub fn gateway(net: &Net, param: Option<&str>) -> Result<()> {
-//     match param {
-//         None => println!("{}", Net::get_gateway()?),
-//         Some(p) => {
-//             net.set_gateway(&p.parse()?)?;
-//             gateway(net, None)?;
-//         }
-//     }
-//     Ok(())
-// }
-
-#[ipchanger_macros::command(key = 'h', name = "help", usage = "h", description = "Show this help")]
-pub fn help(_: &Net, _: Option<&str>) -> Result<()> {
-    println!("Available commands:");
-    for cmd in COMMANDS_SLICE {
-        println!("{} - {}: {}", cmd.usage.cyan(), cmd.name, cmd.description);
     }
     Ok(())
 }
