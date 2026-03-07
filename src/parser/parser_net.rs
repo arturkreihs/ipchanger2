@@ -1,16 +1,12 @@
 use crate::net::Net;
 use anyhow::{Result, anyhow, bail};
 use owo_colors::OwoColorize;
-use regex::Regex;
 use std::{
     net::Ipv4Addr,
-    sync::{LazyLock, Mutex},
+    sync::Mutex,
 };
 
-static IP_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))/([0-9]|[1-2][0-9]|3[0-2])$")
-        .unwrap()
-});
+use super::IP_REGEX;
 
 static IP_CACHE: Mutex<Vec<Ipv4Addr>> = Mutex::new(vec![]);
 
