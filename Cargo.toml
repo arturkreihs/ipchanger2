@@ -17,6 +17,7 @@ toml = "0.8.23"
 winapi = { version = "0.3.9", features = ["consoleapi", "processenv", "winbase"] }
 linkme = "0.3.35"
 ipchanger_macros = { path = "ipchanger_macros" }
+pinger = { git = "https://github.com/arturkreihs/pinger" }
 
 [build-dependencies]
 winres = "0.1.12"
