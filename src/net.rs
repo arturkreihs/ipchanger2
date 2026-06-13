@@ -5,11 +5,11 @@ pub struct Net {
     pub idx: u32,
     pub name: String,
     mask_db: sled::Db,
+    deleted_db: sled::Db,
 }
 
 impl Net {
     pub fn new(mac: &str) -> Result<Self, NetError> {
-        let mask_db = sled::open("masks")?;
         let mac = Self::parse_mac(mac)?;
         let list = Self::list_ifaces()?;
         let entry = list
@@ -18,7 +18,9 @@ impl Net {
             .ok_or(NetError::NotFound)?;
         let idx = entry.0;
         let name = entry.1.clone();
-        Ok(Net { idx, name, mask_db })
+        let mask_db = sled::open("masks")?;
+        let deleted_db = sled::open("deleted")?;
+        Ok(Net { idx, name, mask_db, deleted_db })
     }
 
     pub fn list_ifaces() -> Result<Vec<(u32, String, [u8; 6])>, NetError> {
@@ -67,6 +69,9 @@ impl Net {
     }
 
     pub fn del_addr(&self, addr: &Ipv4Addr) -> Result<(), NetError> {
+        // get the mask before removing
+        let mask = self.mask_db.get(addr.octets())?.map(|m| m[0]);
+
         Command::new("netsh")
             .arg("interface")
             .arg("ipv4")
@@ -78,6 +83,64 @@ impl Net {
             .and_then(Self::output_handler("netsh"))?;
         self.mask_db.remove(addr.octets())?;
         self.mask_db.flush()?;
+
+        // remember deleted address (up to 3)
+        let next_idx = self
+            .deleted_db
+            .get("cnt")?
+            .map(|v| v[0])
+            .unwrap_or(0);
+        let mut entry = [0u8; 5];
+        entry[..4].copy_from_slice(&addr.octets());
+        entry[4] = mask.unwrap_or(0);
+        self.deleted_db
+            .insert(next_idx.to_string().as_str(), &entry[..])?;
+        self.deleted_db
+            .insert("cnt", &[(next_idx + 1) % 3])?;
+        self.deleted_db.flush()?;
+        Ok(())
+    }
+
+    pub fn get_deleted_addrs(&self) -> Result<Vec<(Ipv4Addr, Option<u8>)>, NetError> {
+        let mut entries: Vec<(u8, Ipv4Addr, Option<u8>)> = Vec::new();
+        for i in 0..3u8 {
+            if let Some(raw) = self.deleted_db.get(i.to_string())? {
+                let octets: [u8; 4] = raw[..4].try_into().unwrap_or([0; 4]);
+                let mask = if raw[4] != 0 { Some(raw[4]) } else { None };
+                entries.push((i, Ipv4Addr::from(octets), mask));
+            }
+        }
+        // sort by index to maintain insertion order
+        entries.sort_by_key(|&(idx, _, _)| idx);
+        Ok(entries.into_iter().map(|(_, ip, m)| (ip, m)).collect())
+    }
+
+    /// Remove a deleted address by its display index (0-based among deleted entries).
+    /// Compacts the remaining entries and updates the counter.
+    pub fn remove_deleted(&self, display_idx: u8) -> Result<(), NetError> {
+        let cnt = self
+            .deleted_db
+            .get("cnt")?
+            .map(|v| v[0])
+            .unwrap_or(0);
+        if display_idx >= cnt || cnt == 0 {
+            return Ok(());
+        }
+        // shift all entries after display_idx down by one
+        for i in display_idx..(cnt.saturating_sub(1)) {
+            let next = (i + 1).to_string();
+            if let Some(val) = self.deleted_db.get(&next)? {
+                self.deleted_db.insert(i.to_string(), val)?;
+                self.deleted_db.remove(&next)?;
+            }
+        }
+        // clear the last used slot
+        let last = (cnt - 1).to_string();
+        self.deleted_db.remove(&last)?;
+        // update counter
+        let new_cnt = cnt - 1;
+        self.deleted_db.insert("cnt", &[new_cnt])?;
+        self.deleted_db.flush()?;
         Ok(())
     }
 

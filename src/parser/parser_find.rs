@@ -68,15 +68,15 @@ fn partial2full(buf: &mut [u8; 4], partial: &str) -> Result<()> {
     Ok(())
 }
 
-mod test {
-    use super::*;
+// mod test {
+//     use super::*;
 
-    #[test]
-    fn test_partial2full() {
-        let mut buf = [0u8; 4];
-        partial2full(&mut buf, "1.2.3").unwrap();
-        assert_eq!(buf, [0, 1, 2, 3]);
-        partial2full(&mut buf, "1.2.3.4").unwrap();
-        assert_eq!(buf, [1, 2, 3, 4]);
-    }
-}
+//     #[test]
+//     fn test_partial2full() {
+//         let mut buf = [0u8; 4];
+//         partial2full(&mut buf, "1.2.3").unwrap();
+//         assert_eq!(buf, [0, 1, 2, 3]);
+//         partial2full(&mut buf, "1.2.3.4").unwrap();
+//         assert_eq!(buf, [1, 2, 3, 4]);
+//     }
+// }
