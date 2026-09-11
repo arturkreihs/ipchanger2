@@ -93,10 +93,8 @@ impl Net {
         let mut entry = [0u8; 5];
         entry[..4].copy_from_slice(&addr.octets());
         entry[4] = mask.unwrap_or(0);
-        self.deleted_db
-            .insert(next_idx.to_string().as_str(), &entry[..])?;
-        self.deleted_db
-            .insert("cnt", &[(next_idx + 1) % 3])?;
+        self.deleted_db.insert(next_idx.to_string(), &entry)?;
+        self.deleted_db.insert("cnt", &[(next_idx + 1) % 3])?;
         self.deleted_db.flush()?;
         Ok(())
     }

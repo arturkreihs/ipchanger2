@@ -21,10 +21,8 @@ fn main() -> Result<()> {
 
             // print interfaces and MACs
             for (_, name, mac) in Net::list_ifaces()? {
-                let mac = mac.iter().fold(String::new(), |mut acc, &byte| {
-                    acc.push_str(&format!("{byte:02x}"));
-                    acc
-                });
+                let mac = format!("{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}", 
+                    mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
                 println!("{mac} - {name}");
             }
             println!("\nPress Enter to exit...");

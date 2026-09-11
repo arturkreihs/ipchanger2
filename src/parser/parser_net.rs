@@ -32,20 +32,20 @@ pub fn add_addr(net: &Net, param: Option<&str>) -> Result<()> {
     let param = param.ok_or(anyhow!("no address provided"))?;
 
     // if param is a plain number, try to re-add a deleted address
-    if !param.contains('/') && !param.contains('.') {
-        let idx: usize = param.parse()?;
-        if idx == 0 {
-            bail!("index is 0");
+        if !param.contains('/') && !param.contains('.') {
+            let idx: usize = param.parse()?;
+            if idx == 0 || idx == 1 {
+                bail!("index {} is invalid", idx);
+            }
+            let active_count = net.get_addrs()?.len();
+            // deleted indices start after active addresses
+            let del_idx = idx
+                .checked_sub(active_count + 1)
+                .ok_or(anyhow!("index {} is not a deleted address index", idx))?;
+            readd_deleted(net, del_idx)?;
+            list_addrs(net, None)?;
+            return Ok(());
         }
-        let active_count = net.get_addrs()?.len();
-        // deleted indices start after active addresses
-        let del_idx = idx
-            .checked_sub(active_count + 1)
-            .ok_or(anyhow!("index {} is not a deleted address index", idx))?;
-        readd_deleted(net, del_idx)?;
-        list_addrs(net, None)?;
-        return Ok(());
-    }
 
     let (addr, mask) = match IP_REGEX.captures(param) {
         None => bail!("invalid address format, try ip_addr/mask"),
@@ -107,30 +107,30 @@ pub fn list_addrs(net: &Net, param: Option<&str>) -> Result<()> {
             .push(addr.0);
     }
     // cache and display deleted addresses with continuation indices
-    {
-        let mut cache = DELETED_CACHE
-            .lock()
-            .map_err(|_| anyhow!("cannot lock DELETED_CACHE for clearing"))?;
-        cache.clear();
-        let base_idx = net.get_addrs()?.len() + 1;
-        for (idx, (ip, mask)) in net.get_deleted_addrs()?.into_iter().enumerate() {
-            let mask_str = mask
-                .map(|m| m.to_string())
-                .or_else(|| Some("?".into()))
-                .map(|mut m| {
-                    m.insert(0, '/');
-                    m
-                })
-                .ok_or(anyhow!("can't get mask"))?;
-            let display_idx = base_idx + idx;
-        println!(
-            "{} - {}{}",
-            display_idx.red(),
-            ip.red(),
-            mask_str.red()
-        );
-            cache.push((ip, mask));
+        {
+            let base_idx = net.get_addrs()?.len() + 1;
+            let mut cache = DELETED_CACHE
+                .lock()
+                .map_err(|_| anyhow!("cannot lock DELETED_CACHE for clearing"))?;
+            cache.clear();
+            for (idx, (ip, mask)) in net.get_deleted_addrs()?.into_iter().enumerate() {
+                let mask_str = mask
+                    .map(|m| m.to_string())
+                    .or_else(|| Some("?".into()))
+                    .map(|mut m| {
+                        m.insert(0, '/');
+                        m
+                    })
+                    .ok_or(anyhow!("can't get mask"))?;
+                let display_idx = base_idx + idx;
+                println!(
+                    "{} - {}{}",
+                    display_idx.red(),
+                    ip.red(),
+                    mask_str.red()
+                );
+                cache.push((ip, mask));
+            }
         }
-    }
     Ok(())
 }
