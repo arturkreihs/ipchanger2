@@ -1,7 +1,13 @@
 use std::net::Ipv4Addr;
 use std::process::{Command, Output};
 
+use default_net::get_interfaces;
+
 pub struct Net {
+    ifaces: Vec<default_net::Interface>, // captured system list (all interfaces)
+    mac1: String,                        // primary interface
+    mac2: Option<String>,                // secondary interface (optional)
+    pos: usize,                          // 0 or 1, active slot
     pub idx: u32,
     pub name: String,
     mask_db: sled::Db,
@@ -9,42 +15,80 @@ pub struct Net {
 }
 
 impl Net {
-    pub fn new(mac: &str) -> Result<Self, NetError> {
-        let mac = Self::parse_mac(mac)?;
-        let list = Self::list_ifaces()?;
-        let entry = list
+    // ponytail: pos starts at 0; a blank mac1 simply fails to resolve (NotFound).
+    pub fn new(mac1: &str, mac2: Option<&str>) -> Result<Self, NetError> {
+        let mut net = Net {
+            ifaces: get_interfaces(),
+            mac1: mac1.to_string(),
+            mac2: mac2.map(|s| s.to_string()),
+            pos: 0,
+            idx: 0,
+            name: String::new(),
+            mask_db: sled::open("masks")?,
+            deleted_db: sled::open("deleted")?,
+        };
+        net.resolve()?;
+        Ok(net)
+    }
+
+    // ponytail: only block when there's nothing to switch to (mac2 unset).
+    pub fn switch(&mut self) -> Result<(), NetError> {
+        let next = self.pos ^ 1;
+        if next == 1 && self.mac2.as_deref().is_none_or(|s| s.trim().is_empty()) {
+            return Err(NetError::SecondNotConfigured);
+        }
+        self.pos = next;
+        self.resolve()?;
+        Ok(())
+    }
+
+    fn resolve(&mut self) -> Result<(), NetError> {
+        let mac_str = if self.pos == 0 {
+            &self.mac1
+        } else {
+            self.mac2.as_ref().ok_or(NetError::SecondNotConfigured)?
+        };
+        let mac = Self::parse_mac(mac_str)?;
+        let iface = self
+            .ifaces
             .iter()
-            .find(|&(_, _, v)| *v == mac)
-            .ok_or(NetError::NotFound)?;
-        let idx = entry.0;
-        let name = entry.1.clone();
-        let mask_db = sled::open("masks")?;
-        let deleted_db = sled::open("deleted")?;
-        Ok(Net { idx, name, mask_db, deleted_db })
+            .find(|i| i.mac_addr.as_ref().map(|m| m.octets()) == Some(mac))
+            .ok_or_else(|| NetError::SecondIfaceNotFound(mac_str.to_string()))?;
+        self.idx = iface.index;
+        self.name = iface
+            .friendly_name
+            .clone()
+            .unwrap_or_else(|| iface.name.clone());
+        Ok(())
     }
 
     pub fn list_ifaces() -> Result<Vec<(u32, String, [u8; 6])>, NetError> {
-        let ifaces = netwatcher::list_interfaces()?;
-        let ifaces = ifaces
+        Ok(get_interfaces()
             .into_iter()
-            .filter_map(|(_, v)| {
-                Self::parse_mac(&v.hw_addr.replace(":", ""))
-                    .map(|m| (v.index, v.name, m))
-                    .ok()
+            .filter_map(|v| {
+                let mac = v.mac_addr.map(|m| m.octets())?;
+                let name = v.friendly_name.unwrap_or(v.name);
+                Some((v.index, name, mac))
             })
-            .collect::<Vec<(u32, String, [u8; 6])>>();
-        Ok(ifaces)
+            .collect())
     }
 
     pub fn get_addrs(&self) -> Result<Vec<(std::net::Ipv4Addr, Option<u8>)>, NetError> {
-        let ifaces = netwatcher::list_interfaces()?;
-        let iface = ifaces.get(&self.idx).ok_or(NetError::NotFound)?;
+        let iface = self
+            .ifaces
+            .iter()
+            .find(|i| i.index == self.idx)
+            .ok_or(NetError::NotFound)?;
         let mut vec = iface
-            .ipv4_ips()
-            .cloned()
-            .map(|ip| {
-                let mask = self.mask_db.get(ip.octets()).unwrap_or(None).map(|m| m[0]);
-                (ip, mask)
+            .ipv4
+            .iter()
+            .filter_map(|n| {
+                let mask = self
+                    .mask_db
+                    .get(n.addr.octets())
+                    .unwrap_or(None)
+                    .map(|m| m[0]);
+                Some((n.addr, mask))
             })
             .collect::<Vec<(Ipv4Addr, Option<u8>)>>();
         vec.sort_by_key(|&(ip, _)| ip);
@@ -206,10 +250,12 @@ impl Net {
 pub enum NetError {
     #[error(transparent)]
     IO(#[from] std::io::Error),
-    #[error(transparent)]
-    NetWatcher(#[from] netwatcher::Error),
     #[error("iface can't be found")]
     NotFound,
+    #[error("second interface not configured - set mac2 in config.toml")]
+    SecondNotConfigured,
+    #[error("second interface MAC '{0}' not found on this system")]
+    SecondIfaceNotFound(String),
     #[error("can't convert MAC from string")]
     MacConvert,
     #[error("can't convert Mask from string")]

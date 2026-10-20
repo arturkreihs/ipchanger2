@@ -9,7 +9,7 @@ IPChanger2 is a simple, automated tool designed to change your set of IP address
 
 ## Initial Setup
 
-When you first launch the application, it will display the MAC addresses of all network interfaces on your system and automatically create a `config.toml` file. Simply open this configuration file and enter the MAC address of the network interface you want to manage.
+When you first launch the application, it will display the MAC addresses of all network interfaces on your system and automatically create a `config.toml` file. Simply open this configuration file and enter the MAC address of the network interface you want to manage (`mac1`). A second interface (`mac2`) is optional and lets you switch management between cards with the `s` command.
 
 ## Running the Application
 
@@ -21,4 +21,5 @@ After configuring the app, run it with administrator privileges. The IPChanger c
 - **`d`** - Remove an IP address by index number (example: `d2` removes the IP address at position 2)
 <!-- - **`g`** - Without param - shows gateway, with ip addr as param - sets gateway -->
 - **`c`** - Ping host (example: `c192.168.2.33`)
+- **`s`** - Switch management to the other configured network card
 - **`q`** - Quit the app

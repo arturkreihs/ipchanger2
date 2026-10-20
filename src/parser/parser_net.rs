@@ -8,11 +8,19 @@ use std::{
 
 use super::IP_REGEX;
 
+#[ipchanger_macros::command(key = 's', name = "switch", usage = "s", description = "Switch management to the other configured network card")]
+pub fn switch(net: &mut Net, _: Option<&str>) -> Result<()> {
+    net.switch()?;
+    println!("Now managing {} ({})", net.name, net.idx);
+    list_addrs(net, None)?; // refresh view on the new interface
+    Ok(())
+}
+
 static IP_CACHE: Mutex<Vec<Ipv4Addr>> = Mutex::new(vec![]);
 static DELETED_CACHE: Mutex<Vec<(Ipv4Addr, Option<u8>)>> = Mutex::new(vec![]);
 
 /// Re-add a deleted address by its display index (0-based among deleted entries).
-fn readd_deleted(net: &Net, idx: usize) -> Result<()> {
+fn readd_deleted(net: &mut Net, idx: usize) -> Result<()> {
     let (ip, mask) = {
         let cache = DELETED_CACHE
             .lock()
@@ -28,7 +36,7 @@ fn readd_deleted(net: &Net, idx: usize) -> Result<()> {
 }
 
 #[ipchanger_macros::command(key = 'a', name = "add", usage = "a<ip/mask> or a<index>", description = "Add IPv4 address in CIDR notation, or re-add a deleted address by index")]
-pub fn add_addr(net: &Net, param: Option<&str>) -> Result<()> {
+pub fn add_addr(net: &mut Net, param: Option<&str>) -> Result<()> {
     let param = param.ok_or(anyhow!("no address provided"))?;
 
     // if param is a plain number, try to re-add a deleted address
@@ -62,7 +70,7 @@ pub fn add_addr(net: &Net, param: Option<&str>) -> Result<()> {
 }
 
 #[ipchanger_macros::command(key = 'd', name = "delete", usage = "d<index>", description = "Delete IPv4 address by its index from the list")]
-pub fn del_addr(net: &Net, param: Option<&str>) -> Result<()> {
+pub fn del_addr(net: &mut Net, param: Option<&str>) -> Result<()> {
     let idx: u8 = param.ok_or(anyhow!("no address index provided"))?.parse()?;
     if idx == 0 {
         bail!("idx is 0");
@@ -82,7 +90,7 @@ pub fn del_addr(net: &Net, param: Option<&str>) -> Result<()> {
 }
 
 #[ipchanger_macros::command(key = 'l', name = "list", usage = "l", description = "List IPv4 addresses on the interface")]
-pub fn list_addrs(net: &Net, param: Option<&str>) -> Result<()> {
+pub fn list_addrs(net: &mut Net, param: Option<&str>) -> Result<()> {
     if param.is_some() {
         bail!("list command shouldn't have any arguments");
     }

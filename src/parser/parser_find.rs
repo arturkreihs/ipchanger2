@@ -9,7 +9,7 @@ use owo_colors::OwoColorize;
 const DEFAULT_MASK: u8 = 24;
 
 #[ipchanger_macros::command(key = 'c', name = "check", usage = "c<ip>", description = "Check IPv4 address")]
-pub fn check(net: &Net, param: Option<&str>) -> Result<()> {
+pub fn check(net: &mut Net, param: Option<&str>) -> Result<()> {
     let param = param.ok_or(anyhow!("invalid address"))?;
 
     // convert partial IP from param to full IP with zero fill

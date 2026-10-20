@@ -31,7 +31,7 @@ fn main() -> Result<()> {
         }
     };
 
-    let net = Net::new(&settings.mac)?;
+    let mut net = Net::new(&settings.mac1, settings.mac2.as_deref())?;
     // println!("Network index = {}", net.idx);
 
     // main loop
@@ -58,7 +58,7 @@ fn main() -> Result<()> {
                     .find(|&c| c.key == ch)
                     .map(|c| c.func)
                     .unwrap_or(parser::help);
-                func(&net, param).map(|_| true)
+                func(&mut net, param).map(|_| true)
             }
         };
 

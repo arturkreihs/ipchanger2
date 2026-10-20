@@ -14,7 +14,7 @@ pub(super) static IP_REGEX: LazyLock<Regex> = LazyLock::new(|| {
         .unwrap()
 });
 
-pub type CommandFn = fn(&Net, Option<&str>) -> Result<()>;
+pub type CommandFn = fn(&mut Net, Option<&str>) -> Result<()>;
 
 pub struct Command {
     pub key: char,
