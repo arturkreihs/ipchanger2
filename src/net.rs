@@ -124,61 +124,43 @@ impl Net {
         self.mask_db.remove(addr.octets())?;
         self.mask_db.flush()?;
 
-        // remember deleted address (up to 3)
-        let next_idx = self
-            .deleted_db
-            .get("cnt")?
-            .map(|v| v[0])
-            .unwrap_or(0);
-        let mut entry = [0u8; 5];
-        entry[..4].copy_from_slice(&addr.octets());
-        entry[4] = mask.unwrap_or(0);
-        self.deleted_db.insert(next_idx.to_string(), &entry)?;
-        self.deleted_db.insert("cnt", &[(next_idx + 1) % 3])?;
+        self.remember_deleted(addr, mask)
+    }
+
+    // remember deleted address (up to 3, oldest first)
+    fn remember_deleted(&self, addr: &Ipv4Addr, mask: Option<u8>) -> Result<(), NetError> {
+        let mut list = self.deleted_raw()?;
+        list.extend_from_slice(&addr.octets());
+        list.push(mask.unwrap_or(0));
+        let excess = list.len().saturating_sub(3 * 5);
+        list.drain(..excess);
+        self.deleted_db.insert("list", list)?;
         self.deleted_db.flush()?;
         Ok(())
     }
 
+    // ponytail: one key holding 5-byte entries (ip + mask, 0 = unknown); legacy "0".."2"/"cnt" keys ignored.
+    fn deleted_raw(&self) -> Result<Vec<u8>, NetError> {
+        Ok(self.deleted_db.get("list")?.map(|v| v.to_vec()).unwrap_or_default())
+    }
+
     pub fn get_deleted_addrs(&self) -> Result<Vec<(Ipv4Addr, Option<u8>)>, NetError> {
-        let mut entries: Vec<(u8, Ipv4Addr, Option<u8>)> = Vec::new();
-        for i in 0..3u8 {
-            if let Some(raw) = self.deleted_db.get(i.to_string())? {
-                let octets: [u8; 4] = raw[..4].try_into().unwrap_or([0; 4]);
-                let mask = if raw[4] != 0 { Some(raw[4]) } else { None };
-                entries.push((i, Ipv4Addr::from(octets), mask));
-            }
-        }
-        // sort by index to maintain insertion order
-        entries.sort_by_key(|&(idx, _, _)| idx);
-        Ok(entries.into_iter().map(|(_, ip, m)| (ip, m)).collect())
+        Ok(self
+            .deleted_raw()?
+            .chunks_exact(5)
+            .map(|e| (Ipv4Addr::new(e[0], e[1], e[2], e[3]), (e[4] != 0).then_some(e[4])))
+            .collect())
     }
 
     /// Remove a deleted address by its display index (0-based among deleted entries).
-    /// Compacts the remaining entries and updates the counter.
     pub fn remove_deleted(&self, display_idx: u8) -> Result<(), NetError> {
-        let cnt = self
-            .deleted_db
-            .get("cnt")?
-            .map(|v| v[0])
-            .unwrap_or(0);
-        if display_idx >= cnt || cnt == 0 {
-            return Ok(());
+        let mut list = self.deleted_raw()?;
+        let start = display_idx as usize * 5;
+        if start + 5 <= list.len() {
+            list.drain(start..start + 5);
+            self.deleted_db.insert("list", list)?;
+            self.deleted_db.flush()?;
         }
-        // shift all entries after display_idx down by one
-        for i in display_idx..(cnt.saturating_sub(1)) {
-            let next = (i + 1).to_string();
-            if let Some(val) = self.deleted_db.get(&next)? {
-                self.deleted_db.insert(i.to_string(), val)?;
-                self.deleted_db.remove(&next)?;
-            }
-        }
-        // clear the last used slot
-        let last = (cnt - 1).to_string();
-        self.deleted_db.remove(&last)?;
-        // update counter
-        let new_cnt = cnt - 1;
-        self.deleted_db.insert("cnt", &[new_cnt])?;
-        self.deleted_db.flush()?;
         Ok(())
     }
 
@@ -264,4 +246,22 @@ pub enum NetError {
     // GetGateway,
     // #[error("can't set gateway IP address")]
     // SetGateway,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn deleted_list_caps_and_removes() {
+        let tmp = || sled::Config::new().temporary(true).open().unwrap();
+        let net = Net { mac1: String::new(), mac2: None, pos: 0, idx: 0, name: String::new(), mask_db: tmp(), deleted_db: tmp() };
+        (1..=4).for_each(|n| net.remember_deleted(&Ipv4Addr::new(10, 0, 0, n), Some(24)).unwrap());
+        let ips = |n: &Net| n.get_deleted_addrs().unwrap().iter().map(|a| a.0.octets()[3]).collect::<Vec<_>>();
+        assert_eq!(ips(&net), [2, 3, 4]);
+        net.remove_deleted(0).unwrap();
+        assert_eq!(ips(&net), [3, 4]);
+        net.remove_deleted(5).unwrap();
+        assert_eq!(ips(&net), [3, 4]);
+    }
 }
