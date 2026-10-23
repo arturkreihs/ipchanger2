@@ -4,7 +4,6 @@ use std::process::{Command, Output};
 use default_net::get_interfaces;
 
 pub struct Net {
-    ifaces: Vec<default_net::Interface>, // captured system list (all interfaces)
     mac1: String,                        // primary interface
     mac2: Option<String>,                // secondary interface (optional)
     pos: usize,                          // 0 or 1, active slot
@@ -18,7 +17,6 @@ impl Net {
     // ponytail: pos starts at 0; a blank mac1 simply fails to resolve (NotFound).
     pub fn new(mac1: &str, mac2: Option<&str>) -> Result<Self, NetError> {
         let mut net = Net {
-            ifaces: get_interfaces(),
             mac1: mac1.to_string(),
             mac2: mac2.map(|s| s.to_string()),
             pos: 0,
@@ -49,9 +47,8 @@ impl Net {
             self.mac2.as_ref().ok_or(NetError::SecondNotConfigured)?
         };
         let mac = Self::parse_mac(mac_str)?;
-        let iface = self
-            .ifaces
-            .iter()
+        let iface = get_interfaces()
+            .into_iter()
             .find(|i| i.mac_addr.as_ref().map(|m| m.octets()) == Some(mac))
             .ok_or_else(|| NetError::SecondIfaceNotFound(mac_str.to_string()))?;
         self.idx = iface.index;
@@ -74,9 +71,8 @@ impl Net {
     }
 
     pub fn get_addrs(&self) -> Result<Vec<(std::net::Ipv4Addr, Option<u8>)>, NetError> {
-        let iface = self
-            .ifaces
-            .iter()
+        let iface = get_interfaces()
+            .into_iter()
             .find(|i| i.index == self.idx)
             .ok_or(NetError::NotFound)?;
         let mut vec = iface
