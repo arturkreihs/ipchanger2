@@ -71,24 +71,42 @@ impl Net {
     }
 
     pub fn get_addrs(&self) -> Result<Vec<(std::net::Ipv4Addr, Option<u8>)>, NetError> {
-        let iface = get_interfaces()
+        let mut vec = Self::iface_ipv4(self.idx)?
             .into_iter()
-            .find(|i| i.index == self.idx)
-            .ok_or(NetError::NotFound)?;
-        let mut vec = iface
-            .ipv4
-            .iter()
-            .filter_map(|n| {
+            .map(|addr| {
                 let mask = self
                     .mask_db
-                    .get(n.addr.octets())
+                    .get(addr.octets())
                     .unwrap_or(None)
                     .map(|m| m[0]);
-                Some((n.addr, mask))
+                (addr, mask)
             })
             .collect::<Vec<(Ipv4Addr, Option<u8>)>>();
         vec.sort_by_key(|&(ip, _)| ip);
         Ok(vec)
+    }
+
+    // local table read only; default_net's get_interfaces() does a blocking SendARP per gateway
+    fn iface_ipv4(idx: u32) -> Result<Vec<Ipv4Addr>, NetError> {
+        use winapi::shared::netioapi::{FreeMibTable, GetUnicastIpAddressTable, PMIB_UNICASTIPADDRESS_TABLE};
+        use winapi::shared::ws2def::AF_INET;
+
+        let mut table: PMIB_UNICASTIPADDRESS_TABLE = std::ptr::null_mut();
+        let ret = unsafe { GetUnicastIpAddressTable(AF_INET as u16, &mut table) };
+        if ret != 0 {
+            return Err(std::io::Error::from_raw_os_error(ret as i32).into());
+        }
+        let addrs = unsafe {
+            let rows = std::slice::from_raw_parts((*table).Table.as_ptr(), (*table).NumEntries as usize);
+            let addrs = rows
+                .iter()
+                .filter(|r| r.InterfaceIndex == idx)
+                .map(|r| Ipv4Addr::from(u32::from_be(*r.Address.Ipv4().sin_addr.S_un.S_addr())))
+                .collect();
+            FreeMibTable(table as _);
+            addrs
+        };
+        Ok(addrs)
     }
 
     pub fn add_addr(&self, addr: &Ipv4Addr, mask: u8) -> Result<(), NetError> {
@@ -228,8 +246,6 @@ impl Net {
 pub enum NetError {
     #[error(transparent)]
     IO(#[from] std::io::Error),
-    #[error("iface can't be found")]
-    NotFound,
     #[error("second interface not configured - set mac2 in config.toml")]
     SecondNotConfigured,
     #[error("second interface MAC '{0}' not found on this system")]
@@ -251,6 +267,17 @@ pub enum NetError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn iface_ipv4_matches_default_net() {
+        for i in get_interfaces() {
+            let mut got = Net::iface_ipv4(i.index).unwrap();
+            let mut want = i.ipv4.iter().map(|n| n.addr).collect::<Vec<_>>();
+            got.sort();
+            want.sort();
+            assert_eq!(got, want, "iface {}", i.index);
+        }
+    }
 
     #[test]
     fn deleted_list_caps_and_removes() {

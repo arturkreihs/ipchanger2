@@ -13,7 +13,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 sled = { version = "0.34.7", default-features = false }
 thiserror = "2.0.18"
 toml = "0.8.23"
-winapi = { version = "0.3.9", features = ["consoleapi", "processenv", "winbase"] }
+winapi = { version = "0.3.9", features = ["consoleapi", "processenv", "winbase", "netioapi"] }
 linkme = "0.3.35"
 ipchanger_macros = { path = "ipchanger_macros" }
 pinger = { git = "https://github.com/arturkreihs/pinger" }
